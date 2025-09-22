@@ -1,0 +1,6 @@
+node_modules/
+data/
+*.xlsx
+users.json
+.wwebjs_auth/
+.env
