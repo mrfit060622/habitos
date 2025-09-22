@@ -236,11 +236,21 @@ function createWhatsAppClient(clientId){
 
     client.on('message', async msg=>{
         try{
-            const sender=msg.from;
-            if(!sender||sender.endsWith('@g.us')) return;
-            const raw=String(msg.body||'').trim();
-            if(!raw) return;
-            const up = raw.toUpperCase();
+        const sender = msg.from;
+
+        // Ignora grupos e mensagens sem remetente
+        if (!sender || sender.endsWith('@g.us')) return;
+
+        // 🔒 Só processa se o número já estiver cadastrado
+        const users = await readUsers(clientId);
+        if (!users.includes(sender)) {
+            console.log(`[${clientId}] mensagem ignorada de ${sender}`);
+            return;
+        }
+
+        const raw = String(msg.body || '').trim();
+        if (!raw) return;
+        const up = raw.toUpperCase();
 
             if(up==='START'){await addUser(clientId,sender); await createMonthlyWorkbook(sender); await msg.reply('✅ Você foi inscrito.'); return;}
             if(up==='STOP'){await removeUser(clientId,sender); await msg.reply('✅ Você foi removido.'); return;}
@@ -272,7 +282,7 @@ function createWhatsAppClient(clientId){
                 return;
             }
 
-            await msg.reply('Responda com *SIM* ou *NÃO*. Comandos: *START*, *STOP*, *TEST WRITE*, *SHOW FILE*.');
+            await msg.reply('Responda com *SIM* ou *NÃO*.');
         }catch(err){console.error(err);}
     });
 
