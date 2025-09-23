@@ -7,6 +7,8 @@ const fsp = fs.promises;
 const path = require('path');
 const cron = require('node-cron');
 
+require("dotenv").config();
+
 // ---------------- CONFIG ----------------
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN; // Token do BotFather
 const DATA_DIR = path.join(__dirname);
@@ -14,8 +16,8 @@ const USERS_FILE = path.join(DATA_DIR, 'users.json');
 
 // Áreas e horários
 const schedules = [
-    { time: "11:07", area: "Espírito" },
-    { time: "10:02", area: "Alma" },
+    { time: "21:27", area: "Espírito" },
+    { time: "21:30", area: "Alma" },
     { time: "10:04", area: "Mente" },
     { time: "10:05", area: "Corpo" },
     { time: "10:06", area: "Relacionamentos" },
