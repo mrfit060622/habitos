@@ -42,7 +42,7 @@ function startAgenda(bot) {
 
                 // Envia mensagem
                 await bot.telegram.sendMessage(user,
-                    `⏰ Registro do dia - *${sched.area}*\n${sched.pergunta}`,
+                    `⏰ Registro do dia - *${sched.area}*\n${sched.pergunta}\n${sched.descricao}`,
                     { parse_mode: "Markdown", reply_markup: { inline_keyboard: keyboard } }
                 );
 

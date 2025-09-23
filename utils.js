@@ -10,13 +10,69 @@ const DATA_DIR = path.join(__dirname);
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 
 const schedules = [
-    { time: "22:38", area: "Espírito", tipo: "binario", pergunta: "Você praticou o hábito espiritual hoje?" },
-    { time: "22:39", area: "Alma", tipo: "escala", pergunta: "Como você avaliaria seu cuidado com a alma hoje (0-10)?" },
-    { time: "22:40", area: "Mente", tipo: "escala", pergunta: "Como foi sua atenção à mente hoje (0-10)?" },
-    { time: "22:41", area: "Corpo", tipo: "escala", pergunta: "Como foi seu cuidado com o corpo hoje (0-10)?" },
-    { time: "22:42", area: "Relacionamentos", tipo: "escala", pergunta: "Como foi seu relacionamento com outros hoje (0-10)?" },
-    { time: "22:43", area: "Trabalho/Recursos", tipo: "escala", pergunta: "Como você avaliaria seu trabalho e recursos hoje (0-10)?" },
-    { time: "22:44", area: "Tempo/Lazer", tipo: "escala", pergunta: "Como foi seu tempo livre hoje (0-10)?" }
+    { 
+        time: "20:30", 
+        area: "Espírito", 
+        tipo: "binario", 
+        pergunta: "Você alimentou seu espírito hoje?", 
+        descricao: "Ex.: Orar, meditar ou praticar gratidão."
+    },
+    { 
+        time: "21:00", 
+        area: "Alma", 
+        tipo: "binario", 
+        pergunta: "Você cuidou da sua alma hoje?", 
+        descricao: "Ex.: Pausar, criar, ouvir música ou contemplar arte."
+    },
+    { 
+        time: "08:50", 
+        area: "Mente", 
+        tipo: "binario", 
+        pergunta: "Você estimulou sua mente hoje?", 
+        descricao: "Ex.: Ler, estudar, resolver problemas ou planejar."
+    },
+    { 
+        time: "21:05", 
+        area: "Mente", 
+        tipo: "binario", 
+        pergunta: "Você estimulou sua mente hoje?", 
+        descricao: "Ex.: Ler, estudar, resolver problemas ou planejar."
+    },
+    { 
+        time: "20:25", 
+        area: "Corpo", 
+        tipo: "binario", 
+        pergunta: "Você cuidou do corpo hoje?", 
+        descricao: "Ex.: Exercício, alimentação, hidratação, sono ou alongamento."
+    },
+    { 
+        time: "07:00", 
+        area: "Corpo", 
+        tipo: "binario", 
+        pergunta: "Você cuidou do corpo hoje?", 
+        descricao: "Ex.: Exercício, alimentação, hidratação, sono ou alongamento."
+    },
+    { 
+        time: "21:10", 
+        area: "Relacionamentos", 
+        tipo: "binario", 
+        pergunta: "Você se conectou com alguém hoje?", 
+        descricao: "Ex.: Conversar, apoiar ou demonstrar carinho."
+    },
+    { 
+        time: "19:00", 
+        area: "Trabalho/Recursos", 
+        tipo: "binario", 
+        pergunta: "Você avançou nas suas metas hoje?", 
+        descricao: "Ex.: Trabalhar com foco, organizar tarefas ou aprender."
+    },
+    { 
+        time: "21:15", 
+        area: "Tempo/Lazer", 
+        tipo: "binario", 
+        pergunta: "Você aproveitou seu tempo livre?", 
+        descricao: "Ex.: Descansar, se divertir, praticar hobbies ou curtir a natureza."
+    }
 ];
 
 // ---------------- USERS ----------------
