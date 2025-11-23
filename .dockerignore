@@ -1,0 +1,12 @@
+node_modules
+npm-debug.log
+Dockerfile
+fly.toml
+.git
+.gitignore
+reports
+habitos.db
+*.pdf
+*.xlsx
+__pycache__
+*.pyc

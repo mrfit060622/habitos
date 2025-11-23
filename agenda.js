@@ -1,18 +1,41 @@
 'use strict';
 
 const cron = require('node-cron');
-const axios = require('axios');
-const path = require('path');
-const fs = require('fs/promises');
 const { readUsersMap, autoFillZeros, schedules } = require('./utils');
-
-const REPORT_SERVICE_URL = process.env.REPORT_SERVICE_URL || 'http://127.0.0.1:8000';
-const HTTP_TIMEOUT_MS = 60 * 1000;
+const db = require("./firebase");
 
 function startAgenda(bot) {
   const pendentes = new Map();
 
-  // CRON DAILY: checa cada minuto se há perguntas programadas
+  // 🔥 CRON MINUTELY: envia PDFs de eventos concluídos
+  cron.schedule("* * * * *", async () => {
+    const eventos = await db.collection("events")
+      .where("status", "==", "done")
+      .get();
+
+    for (const doc of eventos.docs) {
+      const data = doc.data();
+      const userId = data.userId;
+
+      try {
+        await bot.telegram.sendDocument(
+          userId,
+          { source: data.pdfPath }
+        );
+
+        await db.collection("events").doc(doc.id).update({
+          status: "sent",
+          sentAt: new Date().toISOString()
+        });
+
+        console.log(`PDF enviado para ${userId}`);
+      } catch (err) {
+        console.error("Erro ao enviar PDF via Telegram:", err);
+      }
+    }
+  });
+
+  // 🔥 CRON DAILY: envia mensagens diárias
   cron.schedule('* * * * *', () => {
     setImmediate(async () => {
       try {
@@ -27,14 +50,12 @@ function startAgenda(bot) {
         for (const user of users) {
           for (const sched of matches) {
             try {
-              // Preenche zeros de áreas anteriores que ficaram pendentes
               const previousAreas = schedules.filter(s => s.time < sched.time).map(s => s.area);
               for (const area of previousAreas) {
-                // note: atualizar por usuário pode ser pesado; ok aqui se poucos usuários
                 await autoFillZeros(user, area);
               }
 
-              // construir inline keyboard
+              // Monta teclado
               let keyboard = [];
               if (sched.tipo === 'binario') {
                 keyboard = [
@@ -47,9 +68,9 @@ function startAgenda(bot) {
                 ];
               }
 
-              // envia
-              await bot.telegram.sendMessage(user,
-                `*⏰ Registro do dia - ${sched.area}*\n${sched.pergunta}\n${sched.descricao}\n\n *Beneficios:* ${sched.beneficios}\n\n *Maleficios:* ${sched.maleficios}\n\n  *Premio:* ${sched.premio}`,
+              await bot.telegram.sendMessage(
+                user,
+                `⏰ Registro do dia - *${sched.area}*\n${sched.pergunta}\n${sched.descricao}`,
                 {
                   parse_mode: 'Markdown',
                   reply_markup: { inline_keyboard: keyboard }
@@ -57,7 +78,7 @@ function startAgenda(bot) {
               );
 
             } catch (errSched) {
-              console.error('[agenda] erro ao processar schedule para user', user, errSched);
+              console.error('[agenda] erro ao processar schedule:', user, errSched);
             }
           }
         }
@@ -67,54 +88,37 @@ function startAgenda(bot) {
     });
   });
 
-  // CRON MONTHLY: tenta gerar e enviar relatórios no último dia às 23:59
-  cron.schedule('59 23 * * *', () => {
-    setImmediate(async () => {
-      const now = new Date();
-      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-      if (now.getDate() !== lastDay) return;
+  // 🔥 CRON MONTHLY / TEST: cria evento no Firestore
+  async function criarEventosMensais() {
+    try {
+      const usersMap = await readUsersMap();
+      const users = usersMap.users || [];
 
-      try {
-        const usersMap = await readUsersMap();
-        const users = usersMap.users || [];
+      for (const user of users) {
+        await db.collection("events").add({
+          type: "monthly-report",
+          userId: user,
+          year: new Date().getFullYear(),
+          month: new Date().getMonth() + 1,
+          status: "pending",
+          createdAt: new Date().toISOString()
+        });
 
-        for (const user of users) {
-          try {
-            const resp = await axios.post(`${REPORT_SERVICE_URL}/relatorio`, {
-              userId: user,
-              year: now.getFullYear(),
-              month: now.getMonth() + 1
-            }, { timeout: HTTP_TIMEOUT_MS });
-
-            const data = resp.data || {};
-
-            // envia PDF se existir no response
-            if (data.pdf) {
-              try {
-                await fs.access(data.pdf); // não-bloqueante
-                await bot.telegram.sendDocument(user, { source: data.pdf, filename: path.basename(data.pdf) });
-              } catch (e) {
-                console.warn('[agenda monthly] arquivo PDF não encontrado ou não acessível:', data.pdf, e.message);
-              }
-            }
-
-            // envia xlsx se retornado (opcional)
-            if (data.xlsx) {
-              try {
-                await fs.access(data.xlsx);
-                await bot.telegram.sendDocument(user, { source: data.xlsx, filename: path.basename(data.xlsx) });
-              } catch (e) {
-                console.warn('[agenda monthly] arquivo XLSX não encontrado ou não acessível:', data.xlsx, e.message);
-              }
-            }
-          } catch (errUser) {
-            console.error('[agenda monthly] falha para usuário', user, errUser.message || errUser);
-          }
-        }
-      } catch (err) {
-        console.error('[agenda monthly] erro geral:', err);
+        console.log(`Evento mensal criado para ${user}`);
       }
-    });
+    } catch (err) {
+      console.error("[agenda monthly] erro geral:", err);
+    }
+  }
+
+  // 🔹 Rodar evento imediatamente para teste
+  criarEventosMensais();
+
+  // 🔹 Cron real para último dia do mês às 23:59 (UTC-3)
+  cron.schedule('59 23 L * *', () => {
+    criarEventosMensais();
+  }, {
+    timezone: "America/Sao_Paulo"
   });
 
   console.log('Agenda de jobs iniciada ✅');

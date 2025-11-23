@@ -4,14 +4,37 @@ const cron = require('node-cron');
 const path = require('path');
 const fs = require('fs/promises');
 const { readUsersMap, autoFillZeros, schedules } = require('./utils');
-
-const REPORT_SERVICE_URL = process.env.REPORT_SERVICE_URL || 'http://127.0.0.1:8000';
-const HTTP_TIMEOUT_MS = 60 * 1000;
+const db = require("./firebase");
 
 function startAgenda(bot) {
-  const pendentes = new Map();
 
-  // CRON DAILY: checa cada minuto se há perguntas programadas
+  // CRON: Enviar PDFs gerados (status: done)
+  cron.schedule("* * * * *", async () => {
+    try {
+      const eventos = await db.collection("events")
+        .where("status", "==", "done")
+        .get();
+
+      for (const doc of eventos.docs) {
+        const data = doc.data();
+        const userId = data.userId;
+
+        await bot.telegram.sendDocument(
+          userId,
+          { source: data.Path }
+        );
+
+        await db.collection("events").doc(doc.id).update({
+          status: "sent",
+          sentAt: new Date().toISOString()
+        });
+      }
+    } catch (err) {
+      console.error("[cron-send-pdf] erro:", err);
+    }
+  });
+
+  // CRON DAILY
   cron.schedule('* * * * *', () => {
     setImmediate(async () => {
       try {
@@ -26,14 +49,12 @@ function startAgenda(bot) {
         for (const user of users) {
           for (const sched of matches) {
             try {
-              // Preenche zeros de áreas anteriores que ficaram pendentes
+              // preencher zeros
               const previousAreas = schedules.filter(s => s.time < sched.time).map(s => s.area);
               for (const area of previousAreas) {
-                // note: atualizar por usuário pode ser pesado; ok aqui se poucos usuários
                 await autoFillZeros(user, area);
               }
 
-              // construir inline keyboard
               let keyboard = [];
               if (sched.tipo === 'binario') {
                 keyboard = [
@@ -46,8 +67,8 @@ function startAgenda(bot) {
                 ];
               }
 
-              // envia
-              await bot.telegram.sendMessage(user,
+              await bot.telegram.sendMessage(
+                user,
                 `⏰ Registro do dia - *${sched.area}*\n${sched.pergunta}\n${sched.descricao}`,
                 {
                   parse_mode: 'Markdown',
@@ -55,20 +76,18 @@ function startAgenda(bot) {
                 }
               );
 
-              // define pendente para auto-fill em 1 minuto
-              
             } catch (errSched) {
-              console.error('[agenda] erro ao processar schedule para user', user, errSched);
+              console.error('[agenda daily] erro para user', user, errSched);
             }
           }
         }
       } catch (err) {
-        console.error('[agenda cron daily] erro geral:', err);
+        console.error('[agenda daily] erro geral:', err);
       }
     });
   });
 
-  // CRON MONTHLY: tenta gerar e enviar relatórios no último dia às 23:59
+  // CRON MONTHLY — cria evento no Firestore
   cron.schedule('59 23 * * *', () => {
     setImmediate(async () => {
       const now = new Date();
@@ -80,46 +99,22 @@ function startAgenda(bot) {
         const users = usersMap.users || [];
 
         for (const user of users) {
-          try {
-            const resp = await axios.post(`${REPORT_SERVICE_URL}/relatorio`, {
-              userId: user,
-              year: now.getFullYear(),
-              month: now.getMonth() + 1
-            }, { timeout: HTTP_TIMEOUT_MS });
-
-            const data = resp.data || {};
-
-            // envia PDF se existir no response
-            if (data.pdf) {
-              try {
-                await fs.access(data.pdf); // não-bloqueante
-                await bot.telegram.sendDocument(user, { source: data.pdf, filename: path.basename(data.pdf) });
-              } catch (e) {
-                console.warn('[agenda monthly] arquivo PDF não encontrado ou não acessível:', data.pdf, e.message);
-              }
-            }
-
-            // envia xlsx se retornado (opcional)
-            if (data.xlsx) {
-              try {
-                await fs.access(data.xlsx);
-                await bot.telegram.sendDocument(user, { source: data.xlsx, filename: path.basename(data.xlsx) });
-              } catch (e) {
-                console.warn('[agenda monthly] arquivo XLSX não encontrado ou não acessível:', data.xlsx, e.message);
-              }
-            }
-          } catch (errUser) {
-            console.error('[agenda monthly] falha para usuário', user, errUser.message || errUser);
-          }
+          await db.collection("events").add({
+            type: "monthly-report",
+            userId: user,
+            year: now.getFullYear(),
+            month: now.getMonth() + 1,
+            status: "pending",
+            createdAt: new Date().toISOString()
+          });
         }
       } catch (err) {
-        console.error('[agenda monthly] erro geral:', err);
+        console.error("[agenda monthly] erro geral:", err);
       }
     });
   });
 
   console.log('Agenda de jobs iniciada ✅');
-  return pendentes;
 }
 
 module.exports = startAgenda;
