@@ -1,0 +1,26 @@
+{
+  "lista_compras": {
+    "🪥🧼 Higiene -  limpeza": [
+      {
+        "item": "Sabão",
+        "quantidade": "1"
+      },
+      {
+        "item": "Detergente",
+        "quantidade": "6"
+      }
+    ],
+    "Açougue 🍖": [
+      {
+        "item": "sobrecoxa de frango",
+        "quantidade": "2kg"
+      }
+    ],
+    "🪥🧼 HIGIENE -  LIMPEZA": [
+      {
+        "item": "Cloro",
+        "quantidade": "1"
+      }
+    ]
+  }
+}

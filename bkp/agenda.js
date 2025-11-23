@@ -49,13 +49,15 @@ function startAgenda(bot) {
 
               // envia
               await bot.telegram.sendMessage(user,
-                `*⏰ Registro do dia - ${sched.area}*\n${sched.pergunta}\n${sched.descricao}\n\n *Beneficios:* ${sched.beneficios}\n\n *Maleficios:* ${sched.maleficios}\n\n  *Premio:* ${sched.premio}`,
+                `⏰ Registro do dia - *${sched.area}*\n${sched.pergunta}\n${sched.descricao}`,
                 {
                   parse_mode: 'Markdown',
                   reply_markup: { inline_keyboard: keyboard }
                 }
               );
 
+              // define pendente para auto-fill em 1 minuto
+              
             } catch (errSched) {
               console.error('[agenda] erro ao processar schedule para user', user, errSched);
             }
