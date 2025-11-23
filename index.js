@@ -7,6 +7,7 @@ const cron = require('node-cron');
 const axios = require('axios');
 const fs = require('fs/promises');
 const path = require('path');
+
 const { getListaCompras, adicionarItem, removerItem } = require('./listas');
 
 const {

@@ -1,7 +1,6 @@
 'use strict';
 
 const cron = require('node-cron');
-const axios = require('axios');
 const path = require('path');
 const fs = require('fs/promises');
 const { readUsersMap, autoFillZeros, schedules } = require('./utils');
